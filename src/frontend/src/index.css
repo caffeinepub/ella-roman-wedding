@@ -1,0 +1,127 @@
+@font-face {
+  font-family: "Fraunces";
+  src: url("/assets/fonts/Fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Crimson Pro";
+  src: url("/assets/fonts/CrimsonPro.woff2") format("woff2");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Blue & Pink Wedding Palette */
+    --background: 97 0.01 80;
+    --foreground: 22 0.03 265;
+
+    --card: 98 0.005 80;
+    --card-foreground: 22 0.03 265;
+
+    --popover: 98 0.005 80;
+    --popover-foreground: 22 0.03 265;
+
+    /* Dusty blue */
+    --primary: 55 0.09 240;
+    --primary-foreground: 99 0.01 80;
+
+    /* Blush pink */
+    --secondary: 80 0.07 10;
+    --secondary-foreground: 22 0.03 265;
+
+    --muted: 92 0.02 80;
+    --muted-foreground: 50 0.04 265;
+
+    /* Rose accent */
+    --accent: 72 0.1 0;
+    --accent-foreground: 22 0.03 265;
+
+    --destructive: 55 0.22 27;
+    --destructive-foreground: 99 0.01 80;
+
+    --border: 88 0.03 80;
+    --input: 88 0.03 80;
+    --ring: 55 0.09 240;
+
+    --radius: 0.75rem;
+
+    --chart-1: 55 0.09 240;
+    --chart-2: 80 0.07 10;
+    --chart-3: 72 0.1 0;
+    --chart-4: 65 0.12 240;
+    --chart-5: 75 0.09 350;
+
+    --sidebar: 97 0.01 80;
+    --sidebar-foreground: 22 0.03 265;
+    --sidebar-primary: 55 0.09 240;
+    --sidebar-primary-foreground: 99 0.01 80;
+    --sidebar-accent: 92 0.02 80;
+    --sidebar-accent-foreground: 22 0.03 265;
+    --sidebar-border: 88 0.03 80;
+    --sidebar-ring: 55 0.09 240;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Crimson Pro", Georgia, serif;
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Fraunces", Georgia, serif;
+  }
+}
+
+@layer utilities {
+  .hero-bg {
+    background: linear-gradient(
+      160deg,
+      oklch(88 0.06 240) 0%,
+      oklch(92 0.04 310) 35%,
+      oklch(90 0.06 10) 70%,
+      oklch(88 0.05 340) 100%
+    );
+  }
+
+  .section-divider {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(75 0.08 340),
+      oklch(70 0.09 240),
+      transparent
+    );
+    height: 1px;
+    border: none;
+  }
+
+  .countdown-card {
+    background: oklch(99 0.005 80 / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid oklch(88 0.04 10 / 0.4);
+  }
+
+  .nav-blur {
+    background: oklch(97 0.01 80 / 0.92);
+    backdrop-filter: blur(16px);
+  }
+}
