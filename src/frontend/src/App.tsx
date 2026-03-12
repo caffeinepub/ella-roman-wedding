@@ -251,7 +251,7 @@ export default function App() {
   return (
     <div
       className="min-h-screen font-body relative"
-      style={{ backgroundColor: "#4a7c59" }}
+      style={{ backgroundColor: "rgba(168, 215, 185, 0.6)" }}
     >
       <FloatingHearts />
       <Toaster />
