@@ -20,54 +20,54 @@
 
 @layer base {
   :root {
-    /* Blue & Pink Wedding Palette */
-    --background: 97 0.01 80;
-    --foreground: 22 0.03 265;
+    /* Green Forest + Pink Hearts Wedding Palette */
+    --background: 55 0.14 145;
+    --foreground: 20 0.04 80;
 
-    --card: 98 0.005 80;
-    --card-foreground: 22 0.03 265;
+    --card: 60 0.12 145;
+    --card-foreground: 20 0.04 80;
 
-    --popover: 98 0.005 80;
-    --popover-foreground: 22 0.03 265;
+    --popover: 60 0.12 145;
+    --popover-foreground: 20 0.04 80;
 
-    /* Dusty blue */
-    --primary: 55 0.09 240;
-    --primary-foreground: 99 0.01 80;
+    /* Pink primary */
+    --primary: 65 0.28 350;
+    --primary-foreground: 97 0.01 80;
 
-    /* Blush pink */
-    --secondary: 80 0.07 10;
-    --secondary-foreground: 22 0.03 265;
+    /* Light green secondary */
+    --secondary: 70 0.14 145;
+    --secondary-foreground: 20 0.04 80;
 
-    --muted: 92 0.02 80;
-    --muted-foreground: 50 0.04 265;
+    --muted: 65 0.1 145;
+    --muted-foreground: 40 0.06 100;
 
     /* Rose accent */
-    --accent: 72 0.1 0;
-    --accent-foreground: 22 0.03 265;
+    --accent: 75 0.22 340;
+    --accent-foreground: 20 0.03 80;
 
     --destructive: 55 0.22 27;
     --destructive-foreground: 99 0.01 80;
 
-    --border: 88 0.03 80;
-    --input: 88 0.03 80;
-    --ring: 55 0.09 240;
+    --border: 62 0.1 145;
+    --input: 62 0.1 145;
+    --ring: 65 0.28 350;
 
     --radius: 0.75rem;
 
-    --chart-1: 55 0.09 240;
-    --chart-2: 80 0.07 10;
-    --chart-3: 72 0.1 0;
-    --chart-4: 65 0.12 240;
-    --chart-5: 75 0.09 350;
+    --chart-1: 65 0.28 350;
+    --chart-2: 70 0.14 145;
+    --chart-3: 75 0.22 340;
+    --chart-4: 60 0.16 145;
+    --chart-5: 80 0.18 355;
 
-    --sidebar: 97 0.01 80;
-    --sidebar-foreground: 22 0.03 265;
-    --sidebar-primary: 55 0.09 240;
-    --sidebar-primary-foreground: 99 0.01 80;
-    --sidebar-accent: 92 0.02 80;
-    --sidebar-accent-foreground: 22 0.03 265;
-    --sidebar-border: 88 0.03 80;
-    --sidebar-ring: 55 0.09 240;
+    --sidebar: 55 0.14 145;
+    --sidebar-foreground: 20 0.04 80;
+    --sidebar-primary: 65 0.28 350;
+    --sidebar-primary-foreground: 97 0.01 80;
+    --sidebar-accent: 65 0.1 145;
+    --sidebar-accent-foreground: 20 0.04 80;
+    --sidebar-border: 62 0.1 145;
+    --sidebar-ring: 65 0.28 350;
   }
 }
 
@@ -77,7 +77,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: #4a7c59;
+    @apply text-foreground;
     font-family: "Crimson Pro", Georgia, serif;
     font-size: 18px;
     line-height: 1.7;
@@ -95,10 +96,10 @@
   .hero-bg {
     background: linear-gradient(
       160deg,
-      oklch(88 0.06 240) 0%,
-      oklch(92 0.04 310) 35%,
-      oklch(90 0.06 10) 70%,
-      oklch(88 0.05 340) 100%
+      #2d5a3d 0%,
+      #3d6b4a 40%,
+      #2e5e40 75%,
+      #265036 100%
     );
   }
 
@@ -106,8 +107,8 @@
     background: linear-gradient(
       90deg,
       transparent,
-      oklch(75 0.08 340),
-      oklch(70 0.09 240),
+      oklch(65 0.28 350),
+      oklch(65 0.15 145),
       transparent
     );
     height: 1px;
@@ -115,13 +116,106 @@
   }
 
   .countdown-card {
-    background: oklch(99 0.005 80 / 0.7);
+    background: rgba(45, 90, 60, 0.75);
     backdrop-filter: blur(12px);
-    border: 1px solid oklch(88 0.04 10 / 0.4);
+    border: 1px solid rgba(220, 120, 160, 0.4);
   }
 
   .nav-blur {
-    background: oklch(97 0.01 80 / 0.92);
+    background: rgba(40, 80, 55, 0.94);
     backdrop-filter: blur(16px);
   }
+
+  .prose-content p {
+    @apply leading-relaxed mb-4;
+    color: rgba(20, 40, 25, 0.9);
+  }
+
+  .prose-content strong {
+    font-weight: 600;
+  }
+}
+
+/* Floating hearts animation */
+@keyframes float-heart {
+  0% {
+    transform: translateY(110vh) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-15vh) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes float-heart-1 {
+  0% {
+    transform: translateY(110vh) translateX(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(50vh) translateX(15px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-20vh) translateX(30px);
+    opacity: 0;
+  }
+}
+@keyframes float-heart-2 {
+  0% {
+    transform: translateY(110vh) translateX(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(50vh) translateX(-20px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-20vh) translateX(-40px);
+    opacity: 0;
+  }
+}
+@keyframes float-heart-3 {
+  0% {
+    transform: translateY(110vh) translateX(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(50vh) translateX(25px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-20vh) translateX(50px);
+    opacity: 0;
+  }
+}
+
+.heart-float {
+  position: fixed;
+  color: #e8609a;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
 }
