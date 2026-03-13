@@ -357,7 +357,7 @@ export default function App() {
           </p>
           <h1
             className="font-display text-6xl sm:text-7xl md:text-8xl font-semibold leading-none mb-3"
-            style={{ color: "#f5e6f0" }}
+            style={{ color: "#e8609a" }}
           >
             Ella & Roman
           </h1>
