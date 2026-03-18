@@ -8,12 +8,32 @@ import {
 } from "@/components/ui/dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Pencil } from "lucide-react";
+import { Camera, Loader2, LogIn, LogOut, Palette, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+// ColorSettings defined locally (backend.ts pending regeneration)
+interface ColorSettings {
+  bgColor: string;
+  titleColor: string;
+  subtitleColor: string;
+  heartColor: string;
+  accentColor: string;
+  navTextColor: string;
+}
+import { ExternalBlob } from "./backend";
 import { useActor } from "./hooks/useActor";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
 const WEDDING_DATE = new Date("2026-08-07T13:00:00");
+
+const DEFAULT_COLORS: ColorSettings = {
+  bgColor: "#84b8ad",
+  titleColor: "#e8609a",
+  subtitleColor: "#a02060",
+  heartColor: "#e8609a",
+  accentColor: "#1a3d25",
+  navTextColor: "#1a3d25",
+};
 
 // --- Floating Hearts ---
 const HEART_CONFIG = [
@@ -32,7 +52,7 @@ const HEART_CONFIG = [
   { left: "94%", size: 14, duration: 14, delay: 10 },
 ];
 
-function FloatingHearts() {
+function FloatingHearts({ color }: { color: string }) {
   return (
     <div
       aria-hidden="true"
@@ -53,7 +73,7 @@ function FloatingHearts() {
             left: h.left,
             bottom: "-60px",
             fontSize: `${h.size}px`,
-            color: "#e8609a",
+            color: color,
             animation: `heartFloat ${h.duration}s ease-in-out ${h.delay}s infinite both`,
             userSelect: "none",
           }}
@@ -194,14 +214,143 @@ function EditDialog({
   );
 }
 
+// --- Color Editor Dialog ---
+const COLOR_LABELS: { key: keyof ColorSettings; label: string }[] = [
+  { key: "bgColor", label: "Hintergrundfarbe" },
+  { key: "titleColor", label: "Titelfarbe" },
+  { key: "subtitleColor", label: "Untertitelfarbe" },
+  { key: "heartColor", label: "Herzchen-Farbe" },
+  { key: "accentColor", label: "Akzentfarbe" },
+  { key: "navTextColor", label: "Navigation Textfarbe" },
+];
+
+function toHex(color: string): string {
+  // If it's already a hex, return as-is
+  if (color.startsWith("#")) return color;
+  // For rgba, extract and convert to hex ignoring alpha for color picker
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (match) {
+    const r = Number.parseInt(match[1]);
+    const g = Number.parseInt(match[2]);
+    const b = Number.parseInt(match[3]);
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+  }
+  return "#000000";
+}
+
+function ColorEditorDialog({
+  open,
+  onClose,
+  colors,
+  onSave,
+  actor,
+}: {
+  open: boolean;
+  onClose: () => void;
+  colors: ColorSettings;
+  onSave: (c: ColorSettings) => void;
+  actor: import("./backend").backendInterface | null;
+}) {
+  const [draft, setDraft] = useState<ColorSettings>(colors);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) setDraft(colors);
+  }, [open, colors]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await (actor as any)?.updateColorSettings(draft);
+      onSave(draft);
+      toast.success("Farben gespeichert!");
+      onClose();
+    } catch {
+      toast.error("Fehler beim Speichern.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        data-ocid="color.dialog"
+        className="max-w-sm"
+        style={{ zIndex: 110 }}
+      >
+        <DialogHeader>
+          <DialogTitle>Farben bearbeiten</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {COLOR_LABELS.map(({ key, label }) => (
+            <div
+              key={String(key)}
+              className="flex items-center justify-between gap-4"
+            >
+              <label
+                className="font-body text-sm flex-1"
+                htmlFor={`color-${String(key)}`}
+              >
+                {label}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id={`color-${String(key)}`}
+                  type="color"
+                  value={toHex(draft[key])}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, [key]: e.target.value }))
+                  }
+                  className="w-10 h-8 rounded cursor-pointer border border-border"
+                  data-ocid="color.input"
+                />
+                <span className="font-mono text-xs text-muted-foreground w-20">
+                  {draft[key]}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            data-ocid="color.cancel_button"
+          >
+            Abbrechen
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            data-ocid="color.save_button"
+          >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {saving ? "Speichern…" : "Speichern"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function App() {
   const { days, hours, minutes, seconds } = useCountdown(WEDDING_DATE);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [sections, setSections] = useState<Record<string, string>>({});
+  const [sectionImages, setSectionImages] = useState<Record<string, string>>(
+    {},
+  );
   const [isAdmin, setIsAdmin] = useState(false);
   const [editKey, setEditKey] = useState<string | null>(null);
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
+  const [colors, setColors] = useState<ColorSettings>(DEFAULT_COLORS);
   const { actor, isFetching } = useActor();
+  const { login, clear, identity, isLoggingIn, isInitializing } =
+    useInternetIdentity();
+
+  const isLoggedIn = !!identity;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -214,25 +363,52 @@ export default function App() {
     const init = async () => {
       try {
         await actor.initializeDefaultSections();
-        const [allSections, adminStatus] = await Promise.all([
-          actor.getAllSections(),
-          actor.isCallerAdmin(),
-        ]);
+        const [allSections, _adminStatus, allImages, colorSettings] =
+          await Promise.all([
+            actor.getAllSections(),
+            actor.isCallerAdmin(),
+            actor.getAllSectionImages(),
+            (actor as any).getColorSettings(),
+          ]);
         const map: Record<string, string> = {};
         for (const s of allSections) map[s.key] = s.content;
         setSections(map);
-        setIsAdmin(adminStatus);
+        setIsAdmin(true); // All logged-in users are admins for this personal site
+        setColors(colorSettings);
+
+        const imgMap: Record<string, string> = {};
+        for (const [key, blob] of allImages) {
+          imgMap[key] = blob.getDirectURL();
+        }
+        setSectionImages(imgMap);
       } catch {
-        // silently fall back to hardcoded content
+        // silently fall back to hardcoded content and default colors
       }
     };
     init();
   }, [actor, isFetching]);
 
+  // Update admin status whenever login state changes
+  useEffect(() => {
+    if (identity) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [identity]);
+
   const pad = (n: number) => String(n).padStart(2, "0");
   const sec = (key: SectionKey, fallback: string) => sections[key] ?? fallback;
   const handleSave = (key: string, content: string) => {
     setSections((prev) => ({ ...prev, [key]: content }));
+  };
+
+  const handleImageSave = (key: string, url: string) => {
+    setSectionImages((prev) => ({ ...prev, [key]: url }));
+  };
+
+  const handleColorSave = (newColors: ColorSettings) => {
+    setColors(newColors);
   };
 
   const EditBtn = ({ sectionKey }: { sectionKey: string }) =>
@@ -248,12 +424,65 @@ export default function App() {
       </button>
     ) : null;
 
+  const ImageEditBtn = ({ sectionKey }: { sectionKey: string }) => {
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    if (!isAdmin) return null;
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !actor) return;
+      setUploading(true);
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const blob = ExternalBlob.fromBytes(bytes);
+        await actor.updateSectionImage(sectionKey, blob);
+        const url = blob.getDirectURL();
+        handleImageSave(sectionKey, url);
+        toast.success("Bild gespeichert!");
+      } catch {
+        toast.error("Fehler beim Hochladen.");
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+
+    return (
+      <>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          data-ocid="image.upload_button"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          data-ocid="image.edit_button"
+          className="ml-2 inline-flex items-center justify-center w-7 h-7 rounded-full hover:bg-white/20 transition-colors text-foreground/70 hover:text-foreground disabled:opacity-50"
+          aria-label="Bild hochladen"
+        >
+          {uploading ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Camera size={14} />
+          )}
+        </button>
+      </>
+    );
+  };
+
   return (
     <div
       className="min-h-screen font-body relative"
-      style={{ backgroundColor: "rgba(168, 215, 185, 0.6)" }}
+      style={{ backgroundColor: colors.bgColor }}
     >
-      <FloatingHearts />
+      <FloatingHearts color={colors.heartColor} />
       <Toaster />
 
       {editKey && (
@@ -266,6 +495,14 @@ export default function App() {
           actor={actor}
         />
       )}
+
+      <ColorEditorDialog
+        open={colorEditorOpen}
+        onClose={() => setColorEditorOpen(false)}
+        colors={colors}
+        onSave={handleColorSave}
+        actor={actor}
+      />
 
       {/* Navigation */}
       <nav
@@ -280,7 +517,7 @@ export default function App() {
             <a
               href="#top"
               className="font-display text-lg font-semibold tracking-wide hover:opacity-80 transition-opacity"
-              style={{ color: "#f5e6f0" }}
+              style={{ color: colors.navTextColor }}
               data-ocid="nav.link"
             >
               Ella & Roman
@@ -291,17 +528,55 @@ export default function App() {
                   key={link.href}
                   href={link.href}
                   className="text-sm font-body hover:opacity-100 opacity-80 transition-opacity"
-                  style={{ color: "#f5e6f0" }}
+                  style={{ color: colors.navTextColor }}
                   data-ocid="nav.link"
                 >
                   {link.label}
                 </a>
               ))}
+              {/* Login/Logout button */}
+              {!isInitializing &&
+                (isLoggedIn ? (
+                  <button
+                    type="button"
+                    onClick={clear}
+                    data-ocid="nav.primary_button"
+                    className="flex items-center gap-1.5 text-sm font-body px-3 py-1.5 rounded-full transition-all hover:opacity-90"
+                    style={{
+                      background: "rgba(232,96,154,0.18)",
+                      color: colors.navTextColor,
+                      border: "1px solid rgba(232,96,154,0.4)",
+                    }}
+                  >
+                    <LogOut size={14} />
+                    {isAdmin ? "Admin · Abmelden" : "Abmelden"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={login}
+                    disabled={isLoggingIn}
+                    data-ocid="nav.secondary_button"
+                    className="flex items-center gap-1.5 text-sm font-body px-3 py-1.5 rounded-full transition-all hover:opacity-90 disabled:opacity-50"
+                    style={{
+                      background: "rgba(74,124,89,0.18)",
+                      color: colors.navTextColor,
+                      border: "1px solid rgba(74,124,89,0.4)",
+                    }}
+                  >
+                    {isLoggingIn ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <LogIn size={14} />
+                    )}
+                    {isLoggingIn ? "Einloggen…" : "Login"}
+                  </button>
+                ))}
             </div>
             <button
               type="button"
               className="md:hidden p-2 rounded-md"
-              style={{ color: "#f5e6f0" }}
+              style={{ color: colors.navTextColor }}
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Menü öffnen"
               data-ocid="nav.toggle"
@@ -331,16 +606,104 @@ export default function App() {
                 key={link.href}
                 href={link.href}
                 className="block py-2 text-sm font-body opacity-80 hover:opacity-100 transition-opacity"
-                style={{ color: "#f5e6f0" }}
+                style={{ color: colors.navTextColor }}
                 onClick={() => setMenuOpen(false)}
                 data-ocid="nav.link"
               >
                 {link.label}
               </a>
             ))}
+            {/* Mobile Login/Logout */}
+            {!isInitializing && (
+              <div
+                className="mt-3 pt-3"
+                style={{ borderTop: "1px solid rgba(74,124,89,0.3)" }}
+              >
+                {isLoggedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clear();
+                      setMenuOpen(false);
+                    }}
+                    data-ocid="nav.primary_button"
+                    className="flex items-center gap-2 py-2 text-sm font-body opacity-80 hover:opacity-100 transition-opacity"
+                    style={{ color: colors.navTextColor }}
+                  >
+                    <LogOut size={14} />
+                    {isAdmin ? "Admin · Abmelden" : "Abmelden"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      login();
+                      setMenuOpen(false);
+                    }}
+                    disabled={isLoggingIn}
+                    data-ocid="nav.secondary_button"
+                    className="flex items-center gap-2 py-2 text-sm font-body opacity-80 hover:opacity-100 transition-opacity disabled:opacity-50"
+                    style={{ color: colors.navTextColor }}
+                  >
+                    {isLoggingIn ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <LogIn size={14} />
+                    )}
+                    {isLoggingIn ? "Einloggen…" : "Login"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </nav>
+
+      {/* Admin Toolbar */}
+      {isAdmin && (
+        <div
+          style={{
+            position: "fixed",
+            top: 64,
+            left: 0,
+            right: 0,
+            zIndex: 40,
+            background: "rgba(20,20,20,0.85)",
+            backdropFilter: "blur(8px)",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-widest text-green-400 mr-2">
+              Admin-Modus aktiv
+            </span>
+            <button
+              type="button"
+              onClick={() => setColorEditorOpen(true)}
+              data-ocid="color.open_modal_button"
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition-all hover:bg-white/20"
+              style={{ color: "#fff" }}
+            >
+              <Palette size={16} />
+              Farben
+            </button>
+            <div
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md opacity-80"
+              style={{ color: "#fff" }}
+            >
+              <Pencil size={16} />
+              <span>Text: Stift-Symbol neben Abschnitten klicken</span>
+            </div>
+            <div
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md opacity-80"
+              style={{ color: "#fff" }}
+            >
+              <Camera size={16} />
+              <span>Bilder: Kamera-Symbol neben Bildern klicken</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <section
@@ -350,20 +713,20 @@ export default function App() {
       >
         <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
           <p
-            className="text-sm uppercase tracking-[0.3em] font-body mb-4"
-            style={{ color: "#e8609a" }}
+            className="text-xl font-bold uppercase tracking-[0.3em] font-body mb-4"
+            style={{ color: colors.titleColor }}
           >
             7. – 9. August 2026
           </p>
           <h1
             className="font-display text-6xl sm:text-7xl md:text-8xl font-semibold leading-none mb-3"
-            style={{ color: "#e8609a" }}
+            style={{ color: colors.titleColor }}
           >
             Ella & Roman
           </h1>
           <p
             className="font-display text-2xl sm:text-3xl italic font-light mb-12"
-            style={{ color: "rgba(245,230,240,0.8)" }}
+            style={{ color: colors.subtitleColor }}
           >
             Liebe, Berge & Geschichten
           </p>
@@ -399,7 +762,7 @@ export default function App() {
                 <div key={label} className="flex flex-col items-center">
                   <span
                     className="font-display text-4xl sm:text-5xl font-semibold tabular-nums leading-none"
-                    style={{ color: "#f5e6f0" }}
+                    style={{ color: colors.accentColor }}
                   >
                     {pad(val)}
                   </span>
@@ -422,7 +785,7 @@ export default function App() {
           <a
             href="#willkommen"
             className="inline-flex flex-col items-center gap-2 transition-opacity opacity-60 hover:opacity-100"
-            style={{ color: "#f5e6f0" }}
+            style={{ color: colors.accentColor }}
             aria-label="Nach unten scrollen"
           >
             <span className="text-xs tracking-widest uppercase font-body">
@@ -515,14 +878,29 @@ export default function App() {
 
           {/* Location Image */}
           <div
-            className="my-10 rounded-2xl overflow-hidden"
+            className="my-10 rounded-2xl overflow-hidden relative"
             style={{ boxShadow: "0 20px 60px -12px rgba(0,0,0,0.3)" }}
           >
             <img
-              src="/assets/uploads/Bild-10.03.26-um-09.18-1-1.jpeg"
+              src={
+                sectionImages.location_image ??
+                "/assets/uploads/Bild-10.03.26-um-09.18-1-1.jpeg"
+              }
               alt="Blick auf die Fronalp – Hochzeitslocation in den Glarner Bergen"
               className="w-full h-auto object-cover"
             />
+            {isAdmin && (
+              <div
+                className="absolute top-3 right-3"
+                style={{
+                  background: "rgba(0,0,0,0.45)",
+                  borderRadius: "999px",
+                  padding: "2px",
+                }}
+              >
+                <ImageEditBtn sectionKey="location_image" />
+              </div>
+            )}
           </div>
 
           <SubHeading editBtn={<EditBtn sectionKey="anreise" />}>
@@ -545,7 +923,7 @@ export default function App() {
           >
             <p
               className="font-display text-base font-semibold"
-              style={{ color: "#1a3d25" }}
+              style={{ color: colors.accentColor }}
             >
               Treffpunkt Bahnhof Ziegelbrücke
             </p>
@@ -612,7 +990,7 @@ export default function App() {
             <DayCard day="Samstag, 8. August 2026" badge="Hauptfest">
               <p
                 className="text-xs uppercase tracking-widest font-body mb-2 mt-1"
-                style={{ color: "#e8609a" }}
+                style={{ color: colors.titleColor }}
               >
                 Für alle, die bereits da sind
               </p>
@@ -623,7 +1001,7 @@ export default function App() {
               <ScheduleItem time="10.15–11.15 Uhr">Workshop</ScheduleItem>
               <p
                 className="text-xs uppercase tracking-widest font-body mb-2 mt-4"
-                style={{ color: "#e8609a" }}
+                style={{ color: colors.titleColor }}
               >
                 Für alle, die am Samstag anreisen
               </p>
@@ -636,7 +1014,7 @@ export default function App() {
               </ScheduleItem>
               <p
                 className="text-xs uppercase tracking-widest font-body mb-2 mt-4"
-                style={{ color: "#e8609a" }}
+                style={{ color: colors.titleColor }}
               >
                 Für alle
               </p>
@@ -722,7 +1100,7 @@ export default function App() {
           >
             <p
               className="font-display text-base font-semibold"
-              style={{ color: "#1a3d25" }}
+              style={{ color: colors.accentColor }}
             >
               Check-Out für alle: Sonntag, 11:00 Uhr
             </p>
@@ -776,7 +1154,7 @@ export default function App() {
           >
             <p
               className="font-display font-semibold"
-              style={{ color: "#1a3d25" }}
+              style={{ color: colors.accentColor }}
             >
               Waller R. o. Novotny E.
             </p>
@@ -793,7 +1171,14 @@ export default function App() {
 
         {/* Anmeldung */}
         <section id="anmeldung" data-ocid="anmeldung.section">
-          <SectionHeading editBtn={<EditBtn sectionKey="anmeldung" />}>
+          <SectionHeading
+            editBtn={
+              <>
+                <EditBtn sectionKey="anmeldung" />
+                <ImageEditBtn sectionKey="anmeldung_image" />
+              </>
+            }
+          >
             Anmeldung & Fristen
           </SectionHeading>
           <div className="prose-content">
@@ -804,6 +1189,27 @@ export default function App() {
               )}
             </p>
           </div>
+
+          {/* Anmeldung Image / QR Code slot */}
+          {sectionImages.anmeldung_image ? (
+            <div className="mt-8 flex flex-col items-center">
+              <img
+                src={sectionImages.anmeldung_image}
+                alt="QR-Code / Anmeldelink"
+                className="max-w-xs w-full rounded-xl"
+                style={{
+                  boxShadow: "0 8px 32px -8px rgba(232,96,154,0.3)",
+                  border: "1px solid rgba(232,96,154,0.3)",
+                }}
+              />
+            </div>
+          ) : isAdmin ? (
+            <AnmeldungImageUploadTrigger
+              actor={actor}
+              onSave={(url) => handleImageSave("anmeldung_image", url)}
+            />
+          ) : null}
+
           <div
             className="mt-10 rounded-2xl p-8 text-center"
             style={{
@@ -830,7 +1236,7 @@ export default function App() {
             </div>
             <p
               className="font-display text-2xl font-semibold mb-3"
-              style={{ color: "#1a3d25" }}
+              style={{ color: colors.accentColor }}
             >
               Wir freuen uns auf Dich!
             </p>
@@ -855,7 +1261,7 @@ export default function App() {
       >
         <p
           className="font-display text-2xl font-semibold mb-2"
-          style={{ color: "#f5e6f0" }}
+          style={{ color: colors.accentColor }}
         >
           Ella & Roman
         </p>
@@ -882,6 +1288,75 @@ export default function App() {
         </p>
       </footer>
     </div>
+  );
+}
+
+// --- Anmeldung Image Upload Trigger (inline placeholder for admin) ---
+function AnmeldungImageUploadTrigger({
+  actor,
+  onSave,
+}: {
+  actor: import("./backend").backendInterface | null;
+  onSave: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !actor) return;
+    setUploading(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const blob = ExternalBlob.fromBytes(bytes);
+      await actor.updateSectionImage("anmeldung_image", blob);
+      onSave(blob.getDirectURL());
+      toast.success("Bild gespeichert!");
+    } catch {
+      toast.error("Fehler beim Hochladen.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <button
+        type="button"
+        data-ocid="anmeldung-image-trigger"
+        onClick={(e) => {
+          e.stopPropagation();
+          fileInputRef.current?.click();
+        }}
+        className="mt-8 flex flex-col items-center justify-center gap-3 w-full rounded-xl border-2 border-dashed py-10 cursor-pointer transition-colors hover:bg-white/10"
+        style={{ borderColor: "rgba(232,96,154,0.4)" }}
+        disabled={uploading}
+      >
+        {uploading ? (
+          <Loader2
+            size={32}
+            className="animate-spin"
+            style={{ color: "#e8609a" }}
+          />
+        ) : (
+          <Camera size={32} style={{ color: "rgba(232,96,154,0.6)" }} />
+        )}
+        <span
+          className="font-body text-sm"
+          style={{ color: "rgba(20,60,30,0.6)" }}
+        >
+          {uploading ? "Hochladen…" : "QR-Code / Bild hochladen"}
+        </span>
+      </button>
+    </>
   );
 }
 
