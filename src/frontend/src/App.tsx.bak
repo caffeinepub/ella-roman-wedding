@@ -6,22 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, Loader2, LogIn, LogOut, Pencil, Settings } from "lucide-react";
+import { Camera, Loader2, LogIn, LogOut, Palette, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ExternalBlob } from "./backend";
-
-// ColorSettings - defined locally as backend bindings may not include it yet
+// ColorSettings defined locally (backend.ts pending regeneration)
 interface ColorSettings {
   bgColor: string;
   titleColor: string;
@@ -30,6 +20,7 @@ interface ColorSettings {
   accentColor: string;
   navTextColor: string;
 }
+import { ExternalBlob } from "./backend";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
@@ -37,11 +28,11 @@ const WEDDING_DATE = new Date("2026-08-07T13:00:00");
 
 const DEFAULT_COLORS: ColorSettings = {
   bgColor: "#84b8ad",
-  titleColor: "#ffffff",
-  subtitleColor: "#ffffff",
-  heartColor: "#7d2235",
-  accentColor: "#ffffff",
-  navTextColor: "#ffffff",
+  titleColor: "#e8609a",
+  subtitleColor: "#a02060",
+  heartColor: "#e8609a",
+  accentColor: "#1a3d25",
+  navTextColor: "#1a3d25",
 };
 
 // --- Floating Hearts ---
@@ -136,10 +127,6 @@ const NAV_LINKS = [
 
 // Section keys
 type SectionKey =
-  | "title"
-  | "subtitle"
-  | "date_label"
-  | "countdown_label"
   | "willkommen"
   | "location"
   | "anreise"
@@ -227,75 +214,7 @@ function EditDialog({
   );
 }
 
-// --- Admin Panel (Side Drawer) ---
-const SECTION_LABELS: {
-  key: SectionKey;
-  label: string;
-  description: string;
-}[] = [
-  {
-    key: "title",
-    label: "Titel",
-    description: "Haupttitel der Seite (z.B. Ella & Roman)",
-  },
-  {
-    key: "subtitle",
-    label: "Untertitel",
-    description: "Untertitel unter dem Haupttitel",
-  },
-  { key: "date_label", label: "Datum", description: "Datum im Hero-Bereich" },
-  {
-    key: "countdown_label",
-    label: "Countdown-Text",
-    description: "Beschriftung über dem Countdown",
-  },
-  {
-    key: "willkommen",
-    label: "Willkommen",
-    description: "Willkommenstext für die Gäste",
-  },
-  {
-    key: "location",
-    label: "Location",
-    description: "Beschreibung der Hochzeitslocation",
-  },
-  {
-    key: "anreise",
-    label: "Anreise",
-    description: "Anreise-Informationen und Shuttle",
-  },
-  {
-    key: "programm_intro",
-    label: "Programm-Intro",
-    description: "Einleitungstext zum Programm",
-  },
-  {
-    key: "workshops",
-    label: "Workshops",
-    description: "Workshop-Beschreibung",
-  },
-  {
-    key: "uebernachtung",
-    label: "Übernachtung",
-    description: "Übernachtungs-Informationen",
-  },
-  {
-    key: "kleidung",
-    label: "Kleidung & Outfit",
-    description: "Kleidungsempfehlungen",
-  },
-  {
-    key: "beitraege",
-    label: "Beiträge",
-    description: "Info zu Beiträgen und Darbietungen",
-  },
-  {
-    key: "anmeldung",
-    label: "Anmeldung",
-    description: "Anmeldungstext und Fristen",
-  },
-];
-
+// --- Color Editor Dialog ---
 const COLOR_LABELS: { key: keyof ColorSettings; label: string }[] = [
   { key: "bgColor", label: "Hintergrundfarbe" },
   { key: "titleColor", label: "Titelfarbe" },
@@ -306,7 +225,9 @@ const COLOR_LABELS: { key: keyof ColorSettings; label: string }[] = [
 ];
 
 function toHex(color: string): string {
+  // If it's already a hex, return as-is
   if (color.startsWith("#")) return color;
+  // For rgba, extract and convert to hex ignoring alpha for color picker
   const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (match) {
     const r = Number.parseInt(match[1]);
@@ -317,300 +238,99 @@ function toHex(color: string): string {
   return "#000000";
 }
 
-function AdminPanel({
+function ColorEditorDialog({
   open,
   onClose,
   colors,
-  onColorSave,
+  onSave,
   actor,
-  sections,
-  onEditSection,
-  sectionImages,
-  onImageSave,
 }: {
   open: boolean;
   onClose: () => void;
   colors: ColorSettings;
-  onColorSave: (c: ColorSettings) => void;
+  onSave: (c: ColorSettings) => void;
   actor: import("./backend").backendInterface | null;
-  sections: Record<string, string>;
-  onEditSection: (key: string) => void;
-  sectionImages: Record<string, string>;
-  onImageSave: (key: string, url: string) => void;
 }) {
   const [draft, setDraft] = useState<ColorSettings>(colors);
-  const [savingColors, setSavingColors] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) setDraft(colors);
   }, [open, colors]);
 
-  const handleSaveColors = async () => {
-    setSavingColors(true);
+  const handleSave = async () => {
+    setSaving(true);
     try {
       await (actor as any)?.updateColorSettings(draft);
-      onColorSave(draft);
+      onSave(draft);
       toast.success("Farben gespeichert!");
-    } catch (err) {
-      console.error("Color save error:", err);
-      toast.error("Fehler beim Speichern der Farben.");
-    } finally {
-      setSavingColors(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent
-        side="right"
-        className="w-full sm:w-[420px] p-0 flex flex-col"
-        style={{ zIndex: 200 }}
-        data-ocid="admin.sheet"
-      >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <SheetTitle className="flex items-center gap-2 font-display text-lg">
-            <Settings size={18} className="text-primary" />
-            Admin-Panel
-          </SheetTitle>
-          <p className="text-xs text-muted-foreground font-body">
-            Verwalte Farben, Texte und Bilder deiner Hochzeitswebsite
-          </p>
-        </SheetHeader>
-
-        <Tabs
-          defaultValue="farben"
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="mx-6 mt-4 grid w-[calc(100%-3rem)] grid-cols-3">
-            <TabsTrigger value="farben" data-ocid="admin.tab">
-              Farben
-            </TabsTrigger>
-            <TabsTrigger value="texte" data-ocid="admin.tab">
-              Texte
-            </TabsTrigger>
-            <TabsTrigger value="bilder" data-ocid="admin.tab">
-              Bilder
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Farben Tab */}
-          <TabsContent
-            value="farben"
-            className="flex-1 overflow-hidden flex flex-col mt-0"
-          >
-            <ScrollArea className="flex-1 px-6 py-4">
-              <div className="space-y-5">
-                {COLOR_LABELS.map(({ key, label }) => (
-                  <div key={String(key)} className="space-y-1.5">
-                    <label
-                      className="text-sm font-medium font-body"
-                      htmlFor={`ap-color-${String(key)}`}
-                    >
-                      {label}
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg border border-border shadow-sm cursor-pointer overflow-hidden relative"
-                        style={{ background: draft[key] }}
-                      >
-                        <input
-                          id={`ap-color-${String(key)}`}
-                          type="color"
-                          value={toHex(draft[key])}
-                          onChange={(e) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              [key]: e.target.value,
-                            }))
-                          }
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          data-ocid="color.input"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={draft[key]}
-                          onChange={(e) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              [key]: e.target.value,
-                            }))
-                          }
-                          className="w-full text-sm font-mono rounded-md border border-input bg-background px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ring"
-                          data-ocid="color.input"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            <div className="px-6 py-4 border-t border-border">
-              <Button
-                className="w-full"
-                onClick={handleSaveColors}
-                disabled={savingColors}
-                data-ocid="color.save_button"
-              >
-                {savingColors ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {savingColors ? "Speichern…" : "Farben speichern"}
-              </Button>
-            </div>
-          </TabsContent>
-
-          {/* Texte Tab */}
-          <TabsContent value="texte" className="flex-1 overflow-hidden mt-0">
-            <ScrollArea className="h-full px-6 py-4">
-              <p className="text-xs text-muted-foreground mb-4 font-body">
-                Klicke auf einen Abschnitt, um den Text zu bearbeiten.
-              </p>
-              <div className="space-y-2">
-                {SECTION_LABELS.map(({ key, label, description }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      onEditSection(key);
-                      onClose();
-                    }}
-                    data-ocid="edit.open_modal_button"
-                    className="w-full text-left rounded-xl px-4 py-3 border border-border hover:bg-muted/50 transition-colors group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm font-body">
-                        {label}
-                      </span>
-                      <Pencil
-                        size={13}
-                        className="text-muted-foreground group-hover:text-foreground transition-colors"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-body">
-                      {description}
-                    </p>
-                    {sections[key] && (
-                      <p className="text-xs mt-1.5 text-foreground/70 font-body truncate">
-                        "{sections[key]}"
-                      </p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Bilder Tab */}
-          <TabsContent value="bilder" className="flex-1 overflow-hidden mt-0">
-            <ScrollArea className="h-full px-6 py-4">
-              <p className="text-xs text-muted-foreground mb-4 font-body">
-                Lade neue Bilder für die verschiedenen Bereiche hoch.
-              </p>
-              <div className="space-y-6">
-                <ImageUploadSlot
-                  label="Location-Bild / Karte"
-                  description="Bild zwischen Location und Anreise-Abschnitt"
-                  sectionKey="location_image"
-                  currentUrl={sectionImages.location_image}
-                  actor={actor}
-                  onSave={onImageSave}
-                />
-                <ImageUploadSlot
-                  label="Anmeldung / QR-Code"
-                  description="QR-Code oder Bild unter Anmeldung & Fristen"
-                  sectionKey="anmeldung_image"
-                  currentUrl={sectionImages.anmeldung_image}
-                  actor={actor}
-                  onSave={onImageSave}
-                />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function ImageUploadSlot({
-  label,
-  description,
-  sectionKey,
-  currentUrl,
-  actor,
-  onSave,
-}: {
-  label: string;
-  description: string;
-  sectionKey: string;
-  currentUrl?: string;
-  actor: import("./backend").backendInterface | null;
-  onSave: (key: string, url: string) => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !actor) return;
-    setUploading(true);
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const blob = ExternalBlob.fromBytes(bytes);
-      await actor.updateSectionImage(sectionKey, blob);
-      onSave(sectionKey, blob.getDirectURL());
-      toast.success("Bild gespeichert!");
+      onClose();
     } catch {
-      toast.error("Fehler beim Hochladen.");
+      toast.error("Fehler beim Speichern.");
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <div>
-        <p className="text-sm font-medium font-body">{label}</p>
-        <p className="text-xs text-muted-foreground font-body">{description}</p>
-      </div>
-      {currentUrl && (
-        <img
-          src={currentUrl}
-          alt={label}
-          className="w-full h-32 object-cover rounded-lg border border-border"
-        />
-      )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-        data-ocid="image.upload_button"
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading || !actor}
-        data-ocid="image.edit_button"
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        data-ocid="color.dialog"
+        className="max-w-sm"
+        style={{ zIndex: 110 }}
       >
-        {uploading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Camera className="mr-2 h-4 w-4" />
-        )}
-        {uploading
-          ? "Hochladen…"
-          : currentUrl
-            ? "Bild ersetzen"
-            : "Bild hochladen"}
-      </Button>
-    </div>
+        <DialogHeader>
+          <DialogTitle>Farben bearbeiten</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {COLOR_LABELS.map(({ key, label }) => (
+            <div
+              key={String(key)}
+              className="flex items-center justify-between gap-4"
+            >
+              <label
+                className="font-body text-sm flex-1"
+                htmlFor={`color-${String(key)}`}
+              >
+                {label}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id={`color-${String(key)}`}
+                  type="color"
+                  value={toHex(draft[key])}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, [key]: e.target.value }))
+                  }
+                  className="w-10 h-8 rounded cursor-pointer border border-border"
+                  data-ocid="color.input"
+                />
+                <span className="font-mono text-xs text-muted-foreground w-20">
+                  {draft[key]}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            data-ocid="color.cancel_button"
+          >
+            Abbrechen
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            data-ocid="color.save_button"
+          >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {saving ? "Speichern…" : "Speichern"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -624,7 +344,7 @@ export default function App() {
   );
   const [isAdmin, setIsAdmin] = useState(false);
   const [editKey, setEditKey] = useState<string | null>(null);
-  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [colors, setColors] = useState<ColorSettings>(DEFAULT_COLORS);
   const { actor, isFetching } = useActor();
   const { login, clear, identity, isLoggingIn, isInitializing } =
@@ -653,6 +373,7 @@ export default function App() {
         const map: Record<string, string> = {};
         for (const s of allSections) map[s.key] = s.content;
         setSections(map);
+        setIsAdmin(true); // All logged-in users are admins for this personal site
         setColors(colorSettings);
 
         const imgMap: Record<string, string> = {};
@@ -774,6 +495,14 @@ export default function App() {
           actor={actor}
         />
       )}
+
+      <ColorEditorDialog
+        open={colorEditorOpen}
+        onClose={() => setColorEditorOpen(false)}
+        colors={colors}
+        onSave={handleColorSave}
+        actor={actor}
+      />
 
       {/* Navigation */}
       <nav
@@ -944,36 +673,37 @@ export default function App() {
             borderBottom: "1px solid rgba(255,255,255,0.1)",
           }}
         >
-          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4">
-            <span className="text-xs font-semibold uppercase tracking-widest text-green-400 flex-1">
-              ✦ Admin-Modus aktiv
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 flex-wrap">
+            <span className="text-xs font-semibold uppercase tracking-widest text-green-400 mr-2">
+              Admin-Modus aktiv
             </span>
             <button
               type="button"
-              onClick={() => setAdminPanelOpen(true)}
-              data-ocid="admin.open_modal_button"
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition-all bg-white/10 hover:bg-white/20"
+              onClick={() => setColorEditorOpen(true)}
+              data-ocid="color.open_modal_button"
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition-all hover:bg-white/20"
               style={{ color: "#fff" }}
             >
-              <Settings size={15} />
-              Admin-Panel öffnen
+              <Palette size={16} />
+              Farben
             </button>
+            <div
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md opacity-80"
+              style={{ color: "#fff" }}
+            >
+              <Pencil size={16} />
+              <span>Text: Stift-Symbol neben Abschnitten klicken</span>
+            </div>
+            <div
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md opacity-80"
+              style={{ color: "#fff" }}
+            >
+              <Camera size={16} />
+              <span>Bilder: Kamera-Symbol neben Bildern klicken</span>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Admin Side Panel */}
-      <AdminPanel
-        open={adminPanelOpen}
-        onClose={() => setAdminPanelOpen(false)}
-        colors={colors}
-        onColorSave={handleColorSave}
-        actor={actor}
-        sections={sections}
-        onEditSection={(key) => setEditKey(key)}
-        sectionImages={sectionImages}
-        onImageSave={handleImageSave}
-      />
 
       {/* Hero */}
       <section
@@ -982,45 +712,24 @@ export default function App() {
         style={{ zIndex: 2 }}
       >
         <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
-          <div className="flex items-center justify-center gap-1">
-            <p
-              className="text-xl font-bold uppercase tracking-[0.3em] font-body mb-4"
-              style={{ color: colors.titleColor }}
-            >
-              {sec("date_label", "7. – 9. August 2026")}
-            </p>
-            {isAdmin && (
-              <span className="mb-4">
-                <EditBtn sectionKey="date_label" />
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-1">
-            <h1
-              className="font-display text-6xl sm:text-7xl md:text-8xl font-semibold leading-none mb-3"
-              style={{ color: colors.titleColor }}
-            >
-              {sec("title", "Ella & Roman")}
-            </h1>
-            {isAdmin && (
-              <span className="mb-3">
-                <EditBtn sectionKey="title" />
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-1">
-            <p
-              className="font-display text-2xl sm:text-3xl italic font-light mb-12"
-              style={{ color: colors.subtitleColor }}
-            >
-              {sec("subtitle", "Liebe, Berge & Geschichten")}
-            </p>
-            {isAdmin && (
-              <span className="mb-12">
-                <EditBtn sectionKey="subtitle" />
-              </span>
-            )}
-          </div>
+          <p
+            className="text-xl font-bold uppercase tracking-[0.3em] font-body mb-4"
+            style={{ color: colors.titleColor }}
+          >
+            7. – 9. August 2026
+          </p>
+          <h1
+            className="font-display text-6xl sm:text-7xl md:text-8xl font-semibold leading-none mb-3"
+            style={{ color: colors.titleColor }}
+          >
+            Ella & Roman
+          </h1>
+          <p
+            className="font-display text-2xl sm:text-3xl italic font-light mb-12"
+            style={{ color: colors.subtitleColor }}
+          >
+            Liebe, Berge & Geschichten
+          </p>
         </div>
 
         {/* Countdown */}
@@ -1037,15 +746,12 @@ export default function App() {
               boxShadow: "0 8px 40px -8px rgba(232,96,154,0.25)",
             }}
           >
-            <div className="flex items-center justify-center gap-1 mb-4">
-              <p
-                className="text-xs uppercase tracking-[0.25em] font-body"
-                style={{ color: "rgba(245,230,240,0.6)" }}
-              >
-                {sec("countdown_label", "Noch bis zur Hochzeit")}
-              </p>
-              {isAdmin && <EditBtn sectionKey="countdown_label" />}
-            </div>
+            <p
+              className="text-xs uppercase tracking-[0.25em] mb-4 font-body"
+              style={{ color: "rgba(245,230,240,0.6)" }}
+            >
+              Noch bis zur Hochzeit
+            </p>
             <div className="grid grid-cols-4 gap-3">
               {[
                 { val: days, label: "Tage" },

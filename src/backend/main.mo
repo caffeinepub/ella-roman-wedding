@@ -66,8 +66,11 @@ actor {
   };
 
   public shared ({ caller }) func initializeDefaultSections() : async () {
-    // Only initialize if not yet set (anyone can trigger, but only sets defaults)
     let defaultSections : [(Text, Text)] = [
+      ("title", "Ella & Roman"),
+      ("subtitle", "Liebe, Berge & Geschichten"),
+      ("date_label", "7. – 9. August 2026"),
+      ("countdown_label", "Noch bis zur Hochzeit"),
       ("willkommen", "Wir freuen uns riesig, unsere Hochzeit mit Dir zu feiern! Unser groesster Wunsch ist es, etwas mehr Zeit mit Dir verbringen zu duerfen. Unser Fest findet deshalb an 2.5 Tagen statt und soll gemutlich - spannend - legendaer werden."),
       ("location", "Wir haben uns fuer eine naturnahe Hochzeit in den Glarner Bergen am Fuss vom Fronalpstock entschieden. Das Fest findet im Stockhus und im Naturfreundehaus Fronalp statt."),
       ("anreise", "Die Strasse zur Fronalp ist sehr kurvig, steil und eng. Aus diesem Grund stellen wir ein Shuttle-Taxi ab dem Bahnhof Ziegelbruecke zur Verfuegung."),
@@ -113,7 +116,7 @@ actor {
     navTextColor : Text;
   };
 
-  var colorSettings : ColorSettings = {
+  stable var colorSettings : ColorSettings = {
     bgColor = "#84b8ad";
     titleColor = "#e8609a";
     subtitleColor = "#a02060";
