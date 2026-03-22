@@ -29,6 +29,7 @@ interface ColorSettings {
   heartColor: string;
   accentColor: string;
   navTextColor: string;
+  countdownBgColor: string;
 }
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
@@ -42,6 +43,7 @@ const DEFAULT_COLORS: ColorSettings = {
   heartColor: "#7d2235",
   accentColor: "#ffffff",
   navTextColor: "#ffffff",
+  countdownBgColor: "rgba(45,90,60,0.75)",
 };
 
 // --- Floating Hearts ---
@@ -303,6 +305,7 @@ const COLOR_LABELS: { key: keyof ColorSettings; label: string }[] = [
   { key: "heartColor", label: "Herzchen-Farbe" },
   { key: "accentColor", label: "Akzentfarbe" },
   { key: "navTextColor", label: "Navigation Textfarbe" },
+  { key: "countdownBgColor", label: "Countdown Hintergrund" },
 ];
 
 function toHex(color: string): string {
@@ -363,16 +366,16 @@ function AdminPanel({
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:w-[420px] p-0 flex flex-col"
+        className="w-full sm:w-[420px] p-0 flex flex-col !bg-white !text-gray-900"
         style={{ zIndex: 200 }}
         data-ocid="admin.sheet"
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-gray-200 bg-white">
           <SheetTitle className="flex items-center gap-2 font-display text-lg">
             <Settings size={18} className="text-primary" />
             Admin-Panel
           </SheetTitle>
-          <p className="text-xs text-muted-foreground font-body">
+          <p className="text-xs text-gray-500 font-body">
             Verwalte Farben, Texte und Bilder deiner Hochzeitswebsite
           </p>
         </SheetHeader>
@@ -464,7 +467,7 @@ function AdminPanel({
           {/* Texte Tab */}
           <TabsContent value="texte" className="flex-1 overflow-hidden mt-0">
             <ScrollArea className="h-full px-6 py-4">
-              <p className="text-xs text-muted-foreground mb-4 font-body">
+              <p className="text-xs text-gray-500 mb-4 font-body">
                 Klicke auf einen Abschnitt, um den Text zu bearbeiten.
               </p>
               <div className="space-y-2">
@@ -505,7 +508,7 @@ function AdminPanel({
           {/* Bilder Tab */}
           <TabsContent value="bilder" className="flex-1 overflow-hidden mt-0">
             <ScrollArea className="h-full px-6 py-4">
-              <p className="text-xs text-muted-foreground mb-4 font-body">
+              <p className="text-xs text-gray-500 mb-4 font-body">
                 Lade neue Bilder für die verschiedenen Bereiche hoch.
               </p>
               <div className="space-y-6">
@@ -522,6 +525,14 @@ function AdminPanel({
                   description="QR-Code oder Bild unter Anmeldung & Fristen"
                   sectionKey="anmeldung_image"
                   currentUrl={sectionImages.anmeldung_image}
+                  actor={actor}
+                  onSave={onImageSave}
+                />
+                <ImageUploadSlot
+                  label="Hero Hintergrundbild"
+                  description="Hintergrundbild für den oberen Bereich der Website (optional)"
+                  sectionKey="hero_image"
+                  currentUrl={sectionImages.hero_image}
                   actor={actor}
                   onSave={onImageSave}
                 />
@@ -978,8 +989,17 @@ export default function App() {
       {/* Hero */}
       <section
         id="top"
-        className="hero-bg min-h-screen flex flex-col items-center justify-center text-center px-4 pt-16 relative"
-        style={{ zIndex: 2 }}
+        className={`${sectionImages.hero_image ? "" : "hero-bg"} min-h-screen flex flex-col items-center justify-center text-center px-4 pt-16 relative`}
+        style={{
+          zIndex: 2,
+          ...(sectionImages.hero_image
+            ? {
+                backgroundImage: `url(${sectionImages.hero_image})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : {}),
+        }}
       >
         <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
           <div className="flex items-center justify-center gap-1">
@@ -1031,7 +1051,7 @@ export default function App() {
           <div
             className="rounded-2xl px-6 py-6"
             style={{
-              background: "rgba(45,90,60,0.75)",
+              background: colors.countdownBgColor,
               backdropFilter: "blur(12px)",
               border: "1px solid rgba(232,96,154,0.4)",
               boxShadow: "0 8px 40px -8px rgba(232,96,154,0.25)",
